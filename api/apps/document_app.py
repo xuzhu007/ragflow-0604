@@ -61,18 +61,21 @@ def upload():
     for file_obj in file_objs:
         if file_obj.filename == "":
             return get_json_result(data=False, message="No file selected!", code=settings.RetCode.ARGUMENT_ERROR)
+        if len(file_obj.filename.encode("utf-8")) > 255:
+            return get_json_result(data=False, message="File name must be 255 bytes or less.", code=settings.RetCode.ARGUMENT_ERROR)
 
     e, kb = KnowledgebaseService.get_by_id(kb_id)
     if not e:
         raise LookupError("Can't find this knowledgebase!")
     err, files = FileService.upload_document(kb, file_objs, current_user.id)
 
+    if err:
+        return get_json_result(data=files, message="\n".join(err), code=settings.RetCode.SERVER_ERROR)
+
     if not files:
         return get_json_result(data=files, message="There seems to be an issue with your file format. Please verify it is correct and not corrupted.", code=settings.RetCode.DATA_ERROR)
     files = [f[0] for f in files]  # remove the blob
 
-    if err:
-        return get_json_result(data=files, message="\n".join(err), code=settings.RetCode.SERVER_ERROR)
     return get_json_result(data=files)
 
 
@@ -146,6 +149,8 @@ def create():
     kb_id = req["kb_id"]
     if not kb_id:
         return get_json_result(data=False, message='Lack of "KB ID"', code=settings.RetCode.ARGUMENT_ERROR)
+    if len(req["name"].encode("utf-8")) > 255:
+        return get_json_result(data=False, message="File name must be 255 bytes or less.", code=settings.RetCode.ARGUMENT_ERROR)
 
     try:
         e, kb = KnowledgebaseService.get_by_id(kb_id)
@@ -401,6 +406,9 @@ def rename():
             return get_data_error_result(message="Document not found!")
         if pathlib.Path(req["name"].lower()).suffix != pathlib.Path(doc.name.lower()).suffix:
             return get_json_result(data=False, message="The extension of file can't be changed", code=settings.RetCode.ARGUMENT_ERROR)
+        if len(req["name"].encode("utf-8")) > 255:
+            return get_json_result(data=False, message="File name must be 255 bytes or less.", code=settings.RetCode.ARGUMENT_ERROR)
+
         for d in DocumentService.query(name=req["name"], kb_id=doc.kb_id):
             if d.name == req["name"]:
                 return get_data_error_result(message="Duplicated document name in the same knowledgebase.")
