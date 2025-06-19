@@ -1,12 +1,11 @@
-import { IToolNode } from '@/interfaces/database/agent';
-import { NodeProps, Position } from '@xyflow/react';
-import { memo } from 'react';
+import { IAgentForm, IToolNode } from '@/interfaces/database/agent';
+import { Handle, NodeProps, Position } from '@xyflow/react';
+import { get } from 'lodash';
+import { memo, useCallback } from 'react';
 import { NodeHandleId } from '../../constant';
-import { CommonHandle } from './handle';
-import { LeftHandleStyle } from './handle-icon';
-import NodeHeader from './node-header';
+import { ToolCard } from '../../form/agent-form/agent-tools';
+import useGraphStore from '../../store';
 import { NodeWrapper } from './node-wrapper';
-import { ToolBar } from './toolbar';
 
 function InnerToolNode({
   id,
@@ -14,20 +13,39 @@ function InnerToolNode({
   isConnectable = true,
   selected,
 }: NodeProps<IToolNode>) {
+  const { edges, getNode } = useGraphStore((state) => state);
+  const upstreamAgentNodeId = edges.find((x) => x.target === id)?.source;
+  const upstreamAgentNode = getNode(upstreamAgentNodeId);
+
+  const handleClick = useCallback(() => {}, []);
+
+  const tools: IAgentForm['tools'] = get(
+    upstreamAgentNode,
+    'data.form.tools',
+    [],
+  );
+
   return (
-    <ToolBar selected={selected} id={id} label={data.label}>
-      <NodeWrapper>
-        <CommonHandle
-          id={NodeHandleId.End}
-          type="target"
-          position={Position.Top}
-          isConnectable={isConnectable}
-          style={LeftHandleStyle}
-          nodeId={id}
-        ></CommonHandle>
-        <NodeHeader id={id} name={data.name} label={data.label}></NodeHeader>
-      </NodeWrapper>
-    </ToolBar>
+    <NodeWrapper>
+      <Handle
+        id={NodeHandleId.End}
+        type="target"
+        position={Position.Top}
+        isConnectable={isConnectable}
+      ></Handle>
+      <ul className="space-y-2">
+        {tools.map((x) => (
+          <ToolCard
+            key={x.component_name}
+            onClick={handleClick}
+            className="cursor-pointer"
+            data-tool={x.component_name}
+          >
+            {x.component_name}
+          </ToolCard>
+        ))}
+      </ul>
+    </NodeWrapper>
   );
 }
 
